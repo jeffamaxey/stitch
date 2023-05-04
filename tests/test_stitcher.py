@@ -38,7 +38,7 @@ def clean_python_kernel(global_python_kernel):
 def clean_name():
     name = str(uuid.uuid1())
     yield name
-    shutil.rmtree(name + '_files')
+    shutil.rmtree(f'{name}_files')
 
 
 @pytest.fixture
@@ -70,14 +70,11 @@ def as_json(document):
 
 @pytest.fixture(params=['python', 'R'], ids=['python', 'R'])
 def code_block(request):
-    if request.param == 'python':
-        code = 'def f(x):\n    return x * 2\n\nf(2)'
-    elif request.param == 'R':
+    if request.param == 'R':
         code = 'f <- function(x){\n  return(x * 2)\n}\n\nf(2)'
-    block = {'t': 'CodeBlock',
-             'c': [['', ['{}'.format(request.param)], []],
-                   code]}
-    return block
+    elif request.param == 'python':
+        code = 'def f(x):\n    return x * 2\n\nf(2)'
+    return {'t': 'CodeBlock', 'c': [['', [f'{request.param}'], []], code]}
 
 
 @pytest.fixture
@@ -342,7 +339,7 @@ class TestIntegration:
         s._kernel_pairs['python'] = clean_python_kernel
         result = s.stitch(code)
         blocks = result['blocks']
-        expected = '{}_files/unnamed_chunk_0.png'.format(clean_name)
+        expected = f'{clean_name}_files/unnamed_chunk_0.png'
         result = blocks[-1]['c'][0]['c'][2][0]
         assert result == expected
 
@@ -365,8 +362,7 @@ class TestIntegration:
         s = R.Stitch(clean_name, self_contained=False)
         s._kernel_pairs['python'] = clean_python_kernel
         s.stitch(code)
-        expected = os.path.join(clean_name + '_files',
-                                'unnamed_chunk_0.' + fmt)
+        expected = os.path.join(f'{clean_name}_files', f'unnamed_chunk_0.{fmt}')
         assert os.path.exists(expected)
 
     @pytest.mark.parametrize('warning, length', [
@@ -453,12 +449,7 @@ class TestCLI:
         result = '--self-contained' in args
         assert result is expected
 
-    @pytest.mark.parametrize('expected, to, extra_args', [
-        (['--css=%s' % CSS], 'html', []),
-        (['-s', '--css=%s' % CSS], 'html', ['-s']),
-        (['--css=foo.css'], 'html', ['--css=foo.css']),
-        (['-c', 'foo.css'], 'html', ['-c', 'foo.css']),
-    ])
+    @pytest.mark.parametrize('expected, to, extra_args', [([f'--css={CSS}'], 'html', []), (['-s', f'--css={CSS}'], 'html', ['-s']), (['--css=foo.css'], 'html', ['--css=foo.css']), (['-c', 'foo.css'], 'html', ['-c', 'foo.css'])])
     def test_css(self, expected, to, extra_args):
         result = enhance_args(to, True, True, extra_args)
         assert result == expected

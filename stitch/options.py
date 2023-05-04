@@ -70,16 +70,18 @@ class LangMapper:
 
     @staticmethod
     def _read_dict(meta, dict_name):
-        if dict_name in meta:
-            try:
-                ret = {key: val['c'][0]['c'] for key, val in meta[dict_name]['c'].items()}
-                if all([isinstance(key, str) and isinstance(val, str) for key, val in ret.items()]):
-                    return ret
-            except (KeyError, IndexError, AttributeError):
-                pass
-            raise TypeError('Invalid {0} metadata section.'.format(dict_name))
-        else:
+        if dict_name not in meta:
             return {}
+        try:
+            ret = {key: val['c'][0]['c'] for key, val in meta[dict_name]['c'].items()}
+            if all(
+                isinstance(key, str) and isinstance(val, str)
+                for key, val in ret.items()
+            ):
+                return ret
+        except (KeyError, IndexError, AttributeError):
+            pass
+        raise TypeError('Invalid {0} metadata section.'.format(dict_name))
 
     def map_to_kernel(self, lang: str):
         return self._kernels.get(lang, lang)

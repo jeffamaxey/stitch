@@ -28,13 +28,16 @@ def has_booktabs(extra_args):
 
 def enhance_args(to, no_standalone, no_self_contained, extra_args):
     extra_args = extra_args.copy()
-    if not no_standalone and not ('-s' in extra_args or
-                                  '--standalone' in extra_args):
+    if (
+        not no_standalone
+        and '-s' not in extra_args
+        and '--standalone' not in extra_args
+    ):
         extra_args.append('--standalone')
     if not no_self_contained and '--self-contained' not in extra_args:
         extra_args.append('--self-contained')
     if to == 'html' and not has_css(extra_args):
-        extra_args.append('--css=%s' % CSS)
+        extra_args.append(f'--css={CSS}')
     if to in ('latex', 'pdf') and not has_booktabs(extra_args):
         extra_args.append('--metadata=header-includes:\\usepackage{booktabs}')
     return extra_args

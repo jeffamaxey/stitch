@@ -164,39 +164,34 @@ class Stitch(HasTraits):
         self.pandoc_extra_args = pandoc_extra_args
 
     def __getattr__(self, attr):
-        if '.' in attr:
-            thing, attr = attr.split('.', 1)
-            return getattr(getattr(self, thing), attr)
-        else:
+        if '.' not in attr:
             return getattr(super(), attr)
+        thing, attr = attr.split('.', 1)
+        return getattr(getattr(self, thing), attr)
 
     def has_trait(self, name):
-        # intercepted `.`ed names for ease of use
-        if '.' in name:
-            ns, name = name.split('.', 1)
-            try:
-                accessor = getattr(self, ns)
-            except AttributeError:
-                return False
-            return accessor.has_trait(name)
-        else:
+        if '.' not in name:
             return super().has_trait(name)
+        ns, name = name.split('.', 1)
+        try:
+            accessor = getattr(self, ns)
+        except AttributeError:
+            return False
+        return accessor.has_trait(name)
 
     def set_trait(self, name, value):
-        # intercepted `.`ed names for ease of use
-        if '.' in name:
-            ns, name = name.split('.', 1)
-            accessor = getattr(self, ns)
-            return accessor.set_trait(name, value)
-        else:
+        if '.' not in name:
             return super().set_trait(name, value)
+        ns, name = name.split('.', 1)
+        accessor = getattr(self, ns)
+        return accessor.set_trait(name, value)
 
     @staticmethod
     def name_resource_dir(name):
         """
         Give the directory name for supporting resources
         """
-        return '{}_files'.format(name)
+        return f'{name}_files'
 
     @property
     def kernel_managers(self):
@@ -295,7 +290,7 @@ class Stitch(HasTraits):
                 attrs['eval'] = self.eval_default
             kernel_name = lm.map_to_kernel(lang)
             if name is None:
-                name = "unnamed_chunk_{}".format(i)
+                name = f"unnamed_chunk_{i}"
             if is_executable(block, kernel_name, attrs):
                 # still need to check, since kernel_factory(lang) is executaed
                 # even if the key is present, only want one kernel / lang
@@ -347,7 +342,7 @@ class Stitch(HasTraits):
 
         The result should be pandoc JSON AST compatible.
         """
-        pandoc = True if (self.get_option('results', attrs) == 'pandoc') else False
+        pandoc = self.get_option('results', attrs) == 'pandoc'
 
         # messsage_pairs can come from stdout or the io stream (maybe others?)
         output_messages = [x for x in messages if not is_execute_input(x)]
@@ -369,9 +364,7 @@ class Stitch(HasTraits):
 
         priority = list(enumerate(NbConvertBase().display_data_priority))
         priority.append((len(priority), 'application/javascript'))
-        order = dict(
-            (x[1], x[0]) for x in priority
-        )
+        order = {x[1]: x[0] for x in priority}
 
         for message in display_messages:
             if message['header']['msg_type'] == 'error':
@@ -389,10 +382,12 @@ class Stitch(HasTraits):
                 key = min(all_data.keys(), key=lambda k: order[k])
                 data = all_data[key]
 
-                if self.to in ('latex', 'pdf', 'beamer'):
-                    if 'text/latex' in all_data.keys():
-                        key = 'text/latex'
-                        data = all_data[key]
+                if (
+                    self.to in ('latex', 'pdf', 'beamer')
+                    and 'text/latex' in all_data.keys()
+                ):
+                    key = 'text/latex'
+                    data = all_data[key]
 
                 if key == 'text/plain':
                     # ident, classes, kvs
@@ -402,8 +397,7 @@ class Stitch(HasTraits):
                 elif key == 'text/html':
                     blocks = [RawBlock('html', data)]
                 elif key == 'application/javascript':
-                    script = '<script type=text/javascript>{}</script>'.format(
-                        data)
+                    script = f'<script type=text/javascript>{data}</script>'
                     blocks = [RawBlock('html', script)]
                 elif key.startswith('image') or key == 'application/pdf':
                     blocks = [self.wrap_image_output(chunk_name, data, key,
@@ -454,7 +448,7 @@ class Stitch(HasTraits):
                                     [Str(caption)],
                                     [data, ""])])
             else:
-                raise TypeError("Unknown mimetype %s" % key)
+                raise TypeError(f"Unknown mimetype {key}")
         else:
             # we are saving to filesystem
             ext = mimetypes.guess_extension(key)
@@ -560,8 +554,7 @@ def kernel_factory(kernel_name: str) -> KernelPair:
 # -----------
 
 def is_code_block(block):
-    is_code = block['t'] == CODEBLOCK
-    return is_code
+    return block['t'] == CODEBLOCK
 
 
 def is_executable(block, lang, attrs):
@@ -599,8 +592,7 @@ def format_input_prompt(prompt, code, number):
     if prompt is None:
         return format_ipython_prompt(code, number)
     lines = code.split('\n')
-    formatted = '\n'.join([prompt + line for line in lines])
-    return formatted
+    return '\n'.join([prompt + line for line in lines])
 
 
 def format_ipython_prompt(code, number):
@@ -726,7 +718,7 @@ def parse_kernel_arguments(block):
     elif len(options) == 1:
         kernel_name = options[0]
     elif len(options) >= 2:
-        kernel_name, chunk_name = options[0:2]
+        kernel_name, chunk_name = options[:2]
     kwargs = dict(block['c'][0][2])
     kwargs = {k: v == 'True' if v in ('True', 'False') else v
               for k, v in kwargs.items()}
@@ -736,10 +728,7 @@ def parse_kernel_arguments(block):
 
 def extract_kernel_name(block):
     options = block['c'][0][1]
-    if len(options) >= 1:
-        return options[0].strip('{}').strip()
-    else:
-        return None
+    return options[0].strip('{}').strip() if len(options) >= 1 else None
 
 
 # -----------------
@@ -771,8 +760,7 @@ def is_execute_input(message):
 def execute_block(block, kp, timeout=None):
     # see nbconvert.run_cell
     code = block['c'][1]
-    messages = run_code(code, kp, timeout=timeout)
-    return messages
+    return run_code(code, kp, timeout=timeout)
 
 
 def run_code(code: str, kp: KernelPair, timeout=None):
@@ -826,9 +814,9 @@ def run_code(code: str, kp: KernelPair, timeout=None):
             continue
 
         msg_type = msg['msg_type']
-        content = msg['content']
-
         if msg_type == 'status':
+            content = msg['content']
+
             if content['execution_state'] == 'idle':
                 break
             else:
@@ -877,6 +865,3 @@ def initialize_kernel(name, kp):
         #                      for fmt in valid_formats)
         # code = dedent(code) + fmt_code
         # kp.kc.execute(code, store_history=False)
-    else:
-        # raise ValueError(name)
-        pass

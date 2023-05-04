@@ -12,18 +12,18 @@ Token = namedtuple("Token", ['kind', 'value'])
 def validate_options(options_line):
     xpr = re.compile(r'^```{\w+.*}')
     if not xpr.match(options_line):
-        raise TypeError("Invalid chunk options %s" % options_line)
+        raise TypeError(f"Invalid chunk options {options_line}")
 
 
 def _transform(kind, text):
     if kind == 'ARG':
-        result = '.' + text
+        result = f'.{text}'
     elif kind in ('DELIM', 'BLANK'):
         result = None
     elif kind in ('OPEN', 'CLOSE', 'KWARG'):
         return text
     else:
-        raise TypeError('Unknown kind %s' % kind)
+        raise TypeError(f'Unknown kind {kind}')
     return result
 
 
@@ -87,5 +87,4 @@ def preprocess_options(options_line):
     items = (_transform(kind, text) for kind, text in tok)
     items = filter(None, items)
     items = ' '.join(items)
-    result = items.replace('{ ', '{').replace(' }', '}').replace(" {", "{")
-    return result
+    return items.replace('{ ', '{').replace(' }', '}').replace(" {", "{")
